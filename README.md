@@ -6,6 +6,9 @@
 > copy-paste commands). Includes a generator, a sync orchestrator, a data linter, self-checks, and two
 > agent skills. Local-only, no server, no dependencies beyond Python 3.10+.
 
+**示例文件：产出的看板示例.md**
+产出的看板示例.md
+
 **给「人多、事杂、还有人/AI 要接手」的项目用的一张小看板。**
 
 一份 JSON 数据源 → 两个产物：
