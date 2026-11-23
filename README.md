@@ -1,4 +1,4 @@
-﻿# 任务进度看板工具包
+# 任务进度看板工具包
 
 > **English TL;DR** — A double-audience project board: one JSON data source generates two artifacts — a
 > single-file HTML board (click a row to expand sub-items grouped into parallel stages, with weights and
@@ -98,6 +98,9 @@ python -X utf8 自测.py
 
 它会在 `%TEMP%\看板包自测 …\示例项目 带空格\` 里跑：初始化 → 同步 → 断言退出码/末行/产物/快照一致，
 并静态扫描"模板里有没有绝对盘符、有没有不该出现的专有词"。当前 **14 项检查全通过**。
+
+> 可选：把 `本机校验词表.example.txt` 复制成 `本机校验词表.local.txt`（已被 `.gitignore` 排除），
+> 一行一个填入你项目的内部名称，自测就会额外拦截"把内部信息带进公开产物"的手滑。
 
 ## 不适合什么
 
