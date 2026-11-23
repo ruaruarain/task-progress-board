@@ -7,7 +7,7 @@
 > agent skills. Local-only, no server, no dependencies beyond Python 3.10+.
 
 **示例文件：产出的看板示例.md**
-产出的看板示例.md
+
 
 **给「人多、事杂、还有人/AI 要接手」的项目用的一张小看板。**
 
