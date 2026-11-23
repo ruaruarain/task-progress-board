@@ -6,8 +6,8 @@
 > copy-paste commands). Includes a generator, a sync orchestrator, a data linter, self-checks, and two
 > agent skills. Local-only, no server, no dependencies beyond Python 3.10+.
 
-**示例文件：产出的看板示例.md**
-
+**示例文件：产出的看板示例.html**
+https://ruaruarain.github.io/task-progress-board/%E4%BA%A7%E5%87%BA%E7%9A%84%E7%9C%8B%E6%9D%BF%E7%A4%BA%E4%BE%8B.html
 
 **给「人多、事杂、还有人/AI 要接手」的项目用的一张小看板。**
 
