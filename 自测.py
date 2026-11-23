@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """工具包自测：在临时目录（故意带中文和空格）里跑一遍 初始化 → 同步 → 自检。
 
 验收六件事：
@@ -24,11 +24,21 @@ sys.stdout.reconfigure(encoding="utf-8")
 HERE = Path(__file__).resolve().parent
 TEXT_SUFFIXES = {".py", ".md", ".json", ".txt", ".yml", ".yaml"}
 
-# 不该出现在公开仓库里的词（示例数据必须虚构；这里只放"本项目历史"的专有词）
-FORBIDDEN_WORDS = [
-    "_接管工作台", "船3", "船5", "船6", "闽台", "广船", "PSYS_", "CABLE_SPECS",
-    "_26秋广船", "_补阶段", "_补权重", "_加权重", "_补体量", "_补还差", "_补AI入口",
-]
+# 专有词黑名单放在**本地文件**里（不入库），避免把内部名称写进公开仓库。
+# 文件：本机校验词表.local.txt（一行一个词，# 开头是注释）。没有该文件就跳过这项扫描。
+def load_local_words() -> list:
+    p = HERE / "本机校验词表.local.txt"
+    if not p.exists():
+        return []
+    words = []
+    for line in p.read_text(encoding="utf-8").splitlines():
+        s = line.strip()
+        if s and not s.startswith("#"):
+            words.append(s)
+    return words
+
+
+FORBIDDEN_WORDS = load_local_words()
 DRIVE_RE = re.compile(r"(?<![A-Za-z0-9])[A-Za-z]:[\\/]")
 
 results = []

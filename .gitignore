@@ -15,3 +15,6 @@ AI交接.md
 Thumbs.db
 desktop.ini
 .DS_Store
+
+# 本机专用的校验词表（含内部名称，绝不入库）
+本机校验词表.local.txt
