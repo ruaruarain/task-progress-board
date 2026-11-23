@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LSTM 股市涨跌预测（v3 终版）· 进度看板</title>
+<style>
+  :root{
+    --bg:#f5f7fb; --card:#fff; --ink:#1f2937; --muted:#6b7280; --line:#e5e7eb;
+    --green:#16a34a; --blue:#2563eb; --amber:#d97706; --red:#dc2626; --gray:#94a3b8; --teal:#0d9488;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:14px/1.55 "Microsoft YaHei","PingFang SC",system-ui,-apple-system,Segoe UI,sans-serif}
+  .wrap{max-width:1240px;margin:0 auto;padding:22px 20px 70px}
+  h1{margin:0 0 4px;font-size:21px}
+  .sub{color:var(--muted);font-size:12.5px}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:10px;margin:16px 0 14px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:9px 12px}
+  .card .k{font-size:11.5px;color:var(--muted)}
+  .card .v{font-size:19px;font-weight:700;margin-top:2px;font-variant-numeric:tabular-nums}
+  .toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:4px 0 12px}
+  .chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:5px 12px;cursor:pointer;
+    font-size:12.5px;color:var(--muted);user-select:none;transition:.15s}
+  .chip:hover{border-color:#cbd5e1}
+  .chip.on{background:#111827;color:#fff;border-color:#111827}
+  .btn{border:1px solid var(--line);background:#fff;border-radius:9px;padding:7px 13px;cursor:pointer;
+    font-size:12.5px;color:#334155}
+  .btn:hover{background:#f8fafc}
+  input[type=search]{flex:1;min-width:190px;border:1px solid var(--line);border-radius:9px;padding:8px 11px;
+    font-size:13px;background:#fff;outline:none}
+  input[type=search]:focus{border-color:#93c5fd;box-shadow:0 0 0 3px #dbeafe}
+  table.main{width:100%;border-collapse:separate;border-spacing:0 6px}
+  thead th{font-size:11.5px;color:var(--muted);font-weight:600;text-align:left;padding:0 12px 2px}
+  tr.flow{background:var(--card);cursor:pointer}
+  tr.flow td{padding:12px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+  tr.flow td:first-child{border-left:1px solid var(--line);border-radius:10px 0 0 10px}
+  tr.flow td:last-child{border-right:1px solid var(--line);border-radius:0 10px 10px 0}
+  tr.flow:hover td{background:#fbfdff}
+  tr.flow.open td{background:#f8fbff;border-bottom-color:transparent}
+  tr.flow.open td:first-child{border-radius:10px 0 0 0}
+  tr.flow.open td:last-child{border-radius:0 10px 0 0}
+  .arrow{display:inline-block;width:14px;color:#94a3b8;transition:transform .15s;font-size:11px}
+  tr.flow.open .arrow{transform:rotate(90deg);color:#2563eb}
+  .name{font-weight:700;font-size:14.5px}
+  .desc{color:var(--muted);font-size:12px;margin-top:2px}
+  .pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11.5px;font-weight:700;white-space:nowrap}
+  .bar{position:relative;height:7px;border-radius:999px;background:#eef2f7;overflow:hidden;min-width:80px}
+  .bar>i{position:absolute;left:0;top:0;bottom:0;border-radius:999px;display:block}
+  .pctwrap{display:flex;align-items:center;gap:8px}
+  .pct{font-variant-numeric:tabular-nums;font-weight:700;font-size:12.5px;min-width:38px;text-align:right}
+  .num{font-variant-numeric:tabular-nums;color:var(--muted)}
+  /* 展开区 */
+  tr.exp{background:#f8fbff}
+  tr.exp>td{padding:0;border-bottom:1px solid var(--line);border-left:1px solid var(--line);
+    border-right:1px solid var(--line);border-radius:0 0 10px 10px}
+  tr.exp.hide{display:none}
+  .expbox{padding:6px 14px 16px 30px}
+  .exphead{display:flex;gap:10px;align-items:center;color:var(--muted);font-size:11.5px;
+    padding:4px 0 10px;border-bottom:1px dashed var(--line);margin-bottom:4px}
+  .sub{display:grid;grid-template-columns:40px minmax(0,1fr) 148px;gap:12px;
+    padding:10px 0 10px 10px;border-bottom:1px dashed #e8edf4;border-left:3px solid transparent}
+  .sub:last-child{border-bottom:0}
+  .s-no{font-size:11.5px;color:#94a3b8;font-variant-numeric:tabular-nums;padding-top:2px}
+  .s-name{font-weight:700;font-size:13.5px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .s-desc{color:#4b5563;font-size:12.3px;margin-top:3px}
+  .s-links{margin-top:4px;display:flex;gap:12px;flex-wrap:wrap;font-size:11.5px}
+  .s-links a{color:#1d4ed8;text-decoration:none}
+  .s-links a:hover{text-decoration:underline}
+  .s-links .tag{color:#94a3b8}
+  .s-kt{margin-top:5px;font-size:11.5px;color:#b91c1c;background:#fef2f2;border:1px solid #fecaca;
+    border-radius:7px;padding:4px 8px;display:inline-block}
+  .s-bar{padding-top:2px}
+  .s-bar .bar{margin-bottom:3px}
+  .s-bar .t{font-size:11px;color:var(--muted);text-align:right;font-variant-numeric:tabular-nums}
+  .tagmin{font-size:10.5px;font-weight:700;border-radius:5px;padding:1px 6px;background:#f1f5f9;color:#64748b}
+  .hint{color:var(--muted);font-size:12px;margin-top:14px}
+  /* 流程图 */
+  .legend{font-size:11.5px;color:var(--muted);margin:6px 0 2px}
+  .listsep{font-size:11.5px;color:var(--muted);font-weight:700;margin:14px 0 4px;
+    border-top:1px dashed var(--line);padding-top:10px}
+  .graph{display:flex;gap:6px;overflow-x:auto;padding:8px 0 4px;align-items:stretch}
+  .stage{background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px;
+    min-width:146px;max-width:200px;flex:0 0 auto;display:flex;flex-direction:column}
+  .stage-head{font-size:10.8px;color:var(--muted);font-weight:700;margin-bottom:7px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .stage-body{display:flex;flex-direction:column;gap:6px}
+  .gcard{border:1px solid #e8edf4;border-left:3px solid var(--gray);border-radius:8px;
+    padding:6px 7px;background:#fcfdff;cursor:default}
+  .gcard.hide,.sub.hide{display:none}
+  .gn{font-size:11.3px;font-weight:600;line-height:1.3;margin-bottom:4px;
+    display:flex;gap:4px;align-items:flex-start;justify-content:space-between}
+  .gn>span:first-child{flex:1;min-width:0;word-break:break-all}
+  /* 权重徽标：1 灰 → 5 红，越重要越显眼 */
+  .wchip{display:inline-block;font-size:10.5px;font-weight:700;border-radius:5px;
+    padding:1px 6px;white-space:nowrap;margin-left:8px;vertical-align:1px}
+  .wmin{font-size:9.5px;font-weight:700;border-radius:4px;padding:1px 4px;flex:0 0 auto;line-height:1.25}
+  .w1{background:#f1f5f9;color:#64748b}
+  .w2{background:#eff6ff;color:#1d4ed8}
+  .w3{background:#fef3c7;color:#92400e}
+  .w4{background:#ffedd5;color:#9a3412}
+  .w5{background:#fee2e2;color:#991b1b}
+  .gbar{height:5px;border-radius:999px;background:#eef2f7;overflow:hidden}
+  .gbar>i{display:block;height:100%;border-radius:999px}
+  .gp{font-size:10.5px;text-align:right;margin-top:2px;font-variant-numeric:tabular-nums}
+  .garrow{align-self:center;color:#94a3b8;font-size:15px;flex:0 0 auto;padding:0 1px}
+  .btn.small{padding:3px 9px;font-size:11.5px;border-radius:7px}
+  @media (max-width:820px){
+    .sub{grid-template-columns:26px minmax(0,1fr);}
+    .s-bar{grid-column:2;display:flex;align-items:center;gap:8px}
+    .s-bar .bar{flex:1;margin:0}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1 id="title"></h1>
+  <div class="sub" id="subtitle"></div>
+  <div class="cards" id="cards"></div>
+
+  <div class="toolbar">
+    <div class="chip on" data-status="全部">全部</div>
+    <div class="chip" data-status="可用">可用</div>
+    <div class="chip" data-status="部分可用">部分可用</div>
+    <div class="chip" data-status="待修">待修</div>
+    <div class="chip" data-status="阻塞">阻塞</div>
+    <div class="chip" data-status="未开始">未开始</div>
+    <button class="btn" id="expandAll">展开全部</button>
+    <button class="btn" id="collapseAll">收起全部</button>
+    <input type="search" id="q" placeholder="搜索流程或子项…（例：选型、表头、照度、置信区间）">
+  </div>
+
+  <table class="main">
+    <thead><tr>
+      <th style="width:46%">流程</th>
+      <th style="width:86px">状态</th>
+      <th style="width:170px">整体完成度</th>
+      <th style="width:104px">子项完成</th>
+      <th style="width:74px">卡点</th>
+      <th style="width:88px">更新</th>
+    </tr></thead>
+    <tbody id="tb"></tbody>
+  </table>
+
+  <div class="hint">点击任意一行 → 在该行下方按流程顺序展开全部子项；再点一次收起。展开后可点链接直接打开文件/文档。</div>
+</div>
+
+<script id="board-data" type="application/json">{"标题": "LSTM 股市涨跌预测（v3 终版）· 进度看板", "项目根": "../..", "更新日期": "2026-11-23", "更新人": "项目负责人", "说明": "20 只 A 股 × 2025-11-17~21 五个交易日 = 100 个预测，v3 终版得分 62/100。看板上每条完成度都能用对应文件或命令复核；未完成的都写了还差什么。", "流程": [{"id": "A", "名称": "A 数据底座与可复现", "一句话": "所有数字都从这 111 份缓存里长出来；它一变，62 分就复现不出来", "状态": "可用", "部分": [{"名称": "行情抓取与本地缓存", "完整度": 100, "说明": "akshare 日线按 `<代码>_<起>_<止>.pkl` 落盘，命中缓存直接读不重复下载；data_cache/ 现有 111 个 pkl（共 1.3MB），报告输出里能看到“从缓存加载数据”", "文件": ["code.ipynb"], "文档": [], "权重": 5, "体量": "中", "阶段": "采集", "文件链接": [{"路径": "code.ipynb", "名": "code.ipynb", "url": "../../code.ipynb"}], "文档链接": []}, {"名称": "样本口径：20 只股票 × 5 个交易日", "完整度": 100, "说明": "overall_results.xlsx 共 100 行有效预测 = 20 只股票 × 每只 5 天（脚本数过：不同代码 20 个、每只恰好 5 行）；版本表里的 20 只名单与之逐一对应", "文件": ["overall_results.xlsx", "股票代码（版本正确率）.xlsx"], "文档": [], "权重": 4, "体量": "小", "阶段": "采集", "文件链接": [{"路径": "overall_results.xlsx", "名": "overall_results.xlsx", "url": "../../overall_results.xlsx"}, {"路径": "股票代码（版本正确率）.xlsx", "名": "股票代码（版本正确率）.xlsx", "url": "../../%E8%82%A1%E7%A5%A8%E4%BB%A3%E7%A0%81%EF%BC%88%E7%89%88%E6%9C%AC%E6%AD%A3%E7%A1%AE%E7%8E%87%EF%BC%89.xlsx"}], "文档链接": []}, {"名称": "复现数据集打包", "完整度": 100, "说明": "复现必须数据集.zip 内 111 个 pkl，与 data_cache/ 逐名比对完全一致（无多、无少、无改名）", "文件": ["复现必须数据集.zip"], "文档": [], "权重": 4, "体量": "小", "阶段": "固化", "文件链接": [{"路径": "复现必须数据集.zip", "名": "复现必须数据集.zip", "url": "../../%E5%A4%8D%E7%8E%B0%E5%BF%85%E9%A1%BB%E6%95%B0%E6%8D%AE%E9%9B%86.zip"}], "文档链接": []}, {"名称": "依赖清单与环境对齐", "完整度": 90, "说明": "requirement.txt 钉住 10 个包版本；conda 环境 nlp2025（Python 3.10.16）实测 10/10 与清单一致。还差：清单里没写“要用 nlp2025”，而 anaconda base 里 torch/tensorflow/xgboost/akshare 全缺，用错环境直接 ImportError", "文件": ["requirement.txt"], "文档": [], "权重": 3, "体量": "小", "阶段": "固化", "文件链接": [{"路径": "requirement.txt", "名": "requirement.txt", "url": "../../requirement.txt"}], "文档链接": []}], "卡点": [], "更新": "2026-11-23", "子项数": 4, "已完成子项": 3, "阶段列表": [{"阶段": "采集", "索引": [0, 1]}, {"阶段": "固化", "索引": [2, 3]}], "完整度": 98, "开放卡点数": 0}, {"id": "B", "名称": "B 特征与训练管道", "一句话": "防泄露做得对不对，决定 62 分是本事还是巧合", "状态": "可用", "部分": [{"名称": "无未来信息的特征工程", "完整度": 95, "说明": "价格列统一先 shift(1) 再构造 ret、开收/高低价比、5 日波动率、量比、RSI、MACD、ma5~ma25，外加前 N 日涨跌二元特征，共 16+N 个特征；target 仍是当日 close>open。还差：补一条断言测试，把“特征不含当日 close/open”钉死，现在只能靠人读代码确认", "文件": ["code.ipynb"], "文档": [], "权重": 5, "体量": "中", "阶段": "特征", "文件链接": [{"路径": "code.ipynb", "名": "code.ipynb", "url": "../../code.ipynb"}], "文档链接": []}, {"名称": "序列样本与验证切分", "完整度": 90, "说明": "seq_length=30 的滑窗样本；XGB 走 TimeSeriesSplit(5) 取 5 折均值，LSTM 走固定 train/val 切分。还差：两套口径并存且报告里的“训练acc”没标注是哪一套，复核的人算不出同一个数", "文件": ["LSTM_training_code.ipynb", "code.ipynb"], "文档": [], "权重": 4, "体量": "中", "阶段": "训练", "文件链接": [{"路径": "LSTM_training_code.ipynb", "名": "LSTM_training_code.ipynb", "url": "../../LSTM_training_code.ipynb"}, {"路径": "code.ipynb", "名": "code.ipynb", "url": "../../code.ipynb"}], "文档链接": []}, {"名称": "未来 5 日预测（模拟价路径）", "完整度": 100, "说明": "predict_future_days 以最后 N 日 close/open 为起点逐日构造特征、输出 5 组 (日期, 预测值, 概率)；报告里 600598 的示例输出可直接看到 5 天概率", "文件": ["【报告】LSTM预测股市未来五日当日涨跌情况.ipynb"], "文档": [], "权重": 4, "体量": "中", "阶段": "训练", "文件链接": [{"路径": "【报告】LSTM预测股市未来五日当日涨跌情况.ipynb", "名": "【报告】LSTM预测股市未来五日当日涨跌情况.ipynb", "url": "../../%E3%80%90%E6%8A%A5%E5%91%8A%E3%80%91LSTM%E9%A2%84%E6%B5%8B%E8%82%A1%E5%B8%82%E6%9C%AA%E6%9D%A5%E4%BA%94%E6%97%A5%E5%BD%93%E6%97%A5%E6%B6%A8%E8%B7%8C%E6%83%85%E5%86%B5.ipynb"}], "文档链接": []}], "卡点": [], "更新": "2026-11-23", "子项数": 3, "已完成子项": 1, "阶段列表": [{"阶段": "特征", "索引": [0]}, {"阶段": "训练", "索引": [1, 2]}], "完整度": 95, "开放卡点数": 0}, {"id": "C", "名称": "C 模型与调参", "一句话": "LSTM 主模型 + XGBoost 对照，参数是搜出来的不是拍的", "状态": "可用", "部分": [{"名称": "LSTM 结构定型", "完整度": 100, "说明": "调参后定为 1 层 LSTM、16 个隐单元、sigmoid 输出（报告 md#14 与代码 LSTMModel(hidden_size=16, num_layers=1) 一致）", "文件": ["【报告】LSTM预测股市未来五日当日涨跌情况.ipynb"], "文档": [], "权重": 4, "体量": "小", "阶段": "定型", "文件链接": [{"路径": "【报告】LSTM预测股市未来五日当日涨跌情况.ipynb", "名": "【报告】LSTM预测股市未来五日当日涨跌情况.ipynb", "url": "../../%E3%80%90%E6%8A%A5%E5%91%8A%E3%80%91LSTM%E9%A2%84%E6%B5%8B%E8%82%A1%E5%B8%82%E6%9C%AA%E6%9D%A5%E4%BA%94%E6%97%A5%E5%BD%93%E6%97%A5%E6%B6%A8%E8%B7%8C%E6%83%85%E5%86%B5.ipynb"}], "文档链接": []}, {"名称": "start_date × prev_trend_days 网格搜索", "完整度": 100, "说明": "每只股票搜 start_date=20241001 × prev_trend_days=5~35 共 31 组，按验证准确率取最优；输出可见“总共需要测试 31 个参数组合”“最佳准确率: 0.6818”", "文件": ["LSTM_training_code.ipynb"], "文档": [], "权重": 4, "体量": "中", "阶段": "调参", "文件链接": [{"路径": "LSTM_training_code.ipynb", "名": "LSTM_training_code.ipynb", "url": "../../LSTM_training_code.ipynb"}], "文档链接": []}, {"名称": "XGBoost 对照基线", "完整度": 100, "说明": "XGBClassifier(n_estimators=50, max_depth=3, lr=0.01, subsample/colsample=0.7)，5 折时序 CV 取均值；最终训练 acc 0.586085、得分 53/100", "文件": ["code.ipynb", "model_comparison.xlsx"], "文档": [], "权重": 4, "体量": "中", "阶段": "对照", "文件链接": [{"路径": "code.ipynb", "名": "code.ipynb", "url": "../../code.ipynb"}, {"路径": "model_comparison.xlsx", "名": "model_comparison.xlsx", "url": "../../model_comparison.xlsx"}], "文档链接": []}], "卡点": [], "更新": "2026-11-23", "子项数": 3, "已完成子项": 3, "阶段列表": [{"阶段": "定型", "索引": [0]}, {"阶段": "调参", "索引": [1]}, {"阶段": "对照", "索引": [2]}], "完整度": 100, "开放卡点数": 0}, {"id": "D", "名称": "D 预测修正与结果对账", "一句话": "两个修正把 52 抬到 62，每一分的加减都能在表里点到", "状态": "可用", "部分": [{"名称": "低把握修正（阈值 0.525）", "完整度": 100, "说明": "预测为涨且把握 <0.525 时改判 0.5（不涨不跌），对账后 LSTM 由 52 → 57.5", "文件": ["overall_results.xlsx"], "文档": [], "权重": 5, "体量": "小", "阶段": "修正", "文件链接": [{"路径": "overall_results.xlsx", "名": "overall_results.xlsx", "url": "../../overall_results.xlsx"}], "文档链接": []}, {"名称": "消息面修正（11/17 当日五条方向）", "完整度": 100, "说明": "军工/光伏/云端/酒水看涨、教育看跌，替换 11-17 当天的预测：xgb 改 4 个（3 对 1 错）→ 55，LSTM 改 7 个（6 对 1 错）→ 62", "文件": ["overall_results.xlsx"], "文档": [], "权重": 5, "体量": "小", "阶段": "修正", "文件链接": [{"路径": "overall_results.xlsx", "名": "overall_results.xlsx", "url": "../../overall_results.xlsx"}], "文档链接": []}, {"名称": "五方案对账表", "完整度": 100, "说明": "model_comparison.xlsx 一行给出五个方案总得分，overall_results.xlsx 100 行逐日明细带“真实acc（当日）”；两表合计 53/55/52/57.5/62，与报告正文一致", "文件": ["model_comparison.xlsx", "overall_results.xlsx"], "文档": [], "权重": 4, "体量": "中", "阶段": "对账", "文件链接": [{"路径": "model_comparison.xlsx", "名": "model_comparison.xlsx", "url": "../../model_comparison.xlsx"}, {"路径": "overall_results.xlsx", "名": "overall_results.xlsx", "url": "../../overall_results.xlsx"}], "文档链接": []}], "卡点": [], "更新": "2026-11-23", "子项数": 3, "已完成子项": 3, "阶段列表": [{"阶段": "修正", "索引": [0, 1]}, {"阶段": "对账", "索引": [2]}], "完整度": 100, "开放卡点数": 0}, {"id": "E", "名称": "E 报告与交付", "一句话": "交出去的东西都在，但报告 notebook 现在不能原样重跑", "状态": "待修", "部分": [{"名称": "报告正文（ipynb / html / pdf 三份同源）", "完整度": 100, "说明": "26 段 Markdown，含目录、引言、数据说明、模型设计、五方案结果、结果分析、总结与局限性；ipynb 154.9KB、html 495.9KB、pdf 1.3MB 三份并存", "文件": ["【报告】LSTM预测股市未来五日当日涨跌情况.ipynb", "【报告】LSTM预测股市未来五日当日涨跌情况.html", "【报告】LSTM预测股市未来五日当日涨跌情况.pdf"], "文档": [], "权重": 5, "体量": "中", "阶段": "成稿", "文件链接": [{"路径": "【报告】LSTM预测股市未来五日当日涨跌情况.ipynb", "名": "【报告】LSTM预测股市未来五日当日涨跌情况.ipynb", "url": "../../%E3%80%90%E6%8A%A5%E5%91%8A%E3%80%91LSTM%E9%A2%84%E6%B5%8B%E8%82%A1%E5%B8%82%E6%9C%AA%E6%9D%A5%E4%BA%94%E6%97%A5%E5%BD%93%E6%97%A5%E6%B6%A8%E8%B7%8C%E6%83%85%E5%86%B5.ipynb"}, {"路径": "【报告】LSTM预测股市未来五日当日涨跌情况.html", "名": "【报告】LSTM预测股市未来五日当日涨跌情况.html", "url": "../../%E3%80%90%E6%8A%A5%E5%91%8A%E3%80%91LSTM%E9%A2%84%E6%B5%8B%E8%82%A1%E5%B8%82%E6%9C%AA%E6%9D%A5%E4%BA%94%E6%97%A5%E5%BD%93%E6%97%A5%E6%B6%A8%E8%B7%8C%E6%83%85%E5%86%B5.html"}, {"路径": "【报告】LSTM预测股市未来五日当日涨跌情况.pdf", "名": "【报告】LSTM预测股市未来五日当日涨跌情况.pdf", "url": "../../%E3%80%90%E6%8A%A5%E5%91%8A%E3%80%91LSTM%E9%A2%84%E6%B5%8B%E8%82%A1%E5%B8%82%E6%9C%AA%E6%9D%A5%E4%BA%94%E6%97%A5%E5%BD%93%E6%97%A5%E6%B6%A8%E8%B7%8C%E6%83%85%E5%86%B5.pdf"}], "文档链接": []}, {"名称": "v2 / v3 版本留档", "完整度": 100, "说明": "v2.html 6.5MB、v3（最终版）.html 12.1MB、code_v3（code最终版）.pdf 8.9MB 都还在，能对照出两个版本的正确率差异", "文件": ["v2.html", "v3（最终版）.html", "code_v3（code最终版）.pdf"], "文档": [], "权重": 2, "体量": "小", "阶段": "成稿", "文件链接": [{"路径": "v2.html", "名": "v2.html", "url": "../../v2.html"}, {"路径": "v3（最终版）.html", "名": "v3（最终版）.html", "url": "../../v3%EF%BC%88%E6%9C%80%E7%BB%88%E7%89%88%EF%BC%89.html"}, {"路径": "code_v3（code最终版）.pdf", "名": "code_v3（code最终版）.pdf", "url": "../../code_v3%EF%BC%88code%E6%9C%80%E7%BB%88%E7%89%88%EF%BC%89.pdf"}], "文档链接": []}, {"名称": "图表物料", "完整度": 100, "说明": "五张图齐备：model_comparison.png、model_comparison_color.png、model_improvement_comparison.png、optimization_results.png、optimization_results_prev_trend.png", "文件": ["model_comparison.png", "model_comparison_color.png", "model_improvement_comparison.png", "optimization_results.png", "optimization_results_prev_trend.png"], "文档": [], "权重": 2, "体量": "小", "阶段": "成稿", "文件链接": [{"路径": "model_comparison.png", "名": "model_comparison.png", "url": "../../model_comparison.png"}, {"路径": "model_comparison_color.png", "名": "model_comparison_color.png", "url": "../../model_comparison_color.png"}, {"路径": "model_improvement_comparison.png", "名": "model_improvement_comparison.png", "url": "../../model_improvement_comparison.png"}, {"路径": "optimization_results.png", "名": "optimization_results.png", "url": "../../optimization_results.png"}, {"路径": "optimization_results_prev_trend.png", "名": "optimization_results_prev_trend.png", "url": "../../optimization_results_prev_trend.png"}], "文档链接": []}, {"名称": "报告 notebook 可复跑性", "完整度": 40, "说明": "报告 ipynb 里 cell 5 的 build_lstm_model 返回的是 torch 模块，cell 6 却用 Keras 的 .fit/.predict 去训练它 —— 两者对不上，按现状重跑训练示例会 AttributeError，现在看到的输出是历史执行结果。还差：统一成一套实现并重跑到绿，或明确把该段标注为“示意代码”、以 LSTM_training_code.ipynb 为唯一可跑入口", "文件": ["【报告】LSTM预测股市未来五日当日涨跌情况.ipynb", "LSTM_training_code.ipynb"], "文档": [], "权重": 5, "体量": "中", "阶段": "复跑校验", "文件链接": [{"路径": "【报告】LSTM预测股市未来五日当日涨跌情况.ipynb", "名": "【报告】LSTM预测股市未来五日当日涨跌情况.ipynb", "url": "../../%E3%80%90%E6%8A%A5%E5%91%8A%E3%80%91LSTM%E9%A2%84%E6%B5%8B%E8%82%A1%E5%B8%82%E6%9C%AA%E6%9D%A5%E4%BA%94%E6%97%A5%E5%BD%93%E6%97%A5%E6%B6%A8%E8%B7%8C%E6%83%85%E5%86%B5.ipynb"}, {"路径": "LSTM_training_code.ipynb", "名": "LSTM_training_code.ipynb", "url": "../../LSTM_training_code.ipynb"}], "文档链接": []}, {"名称": "评审结论留档", "完整度": 90, "说明": "报告末尾写明：LSTM+低把握+消息面 62/100，经课程 TA 审核后排名 15/179。还差：评审回执或排名截图没留档，目前只有正文里一句自述，别人无法外部复核", "文件": ["【报告】LSTM预测股市未来五日当日涨跌情况.html"], "文档": [], "权重": 2, "体量": "小", "阶段": "交付", "文件链接": [{"路径": "【报告】LSTM预测股市未来五日当日涨跌情况.html", "名": "【报告】LSTM预测股市未来五日当日涨跌情况.html", "url": "../../%E3%80%90%E6%8A%A5%E5%91%8A%E3%80%91LSTM%E9%A2%84%E6%B5%8B%E8%82%A1%E5%B8%82%E6%9C%AA%E6%9D%A5%E4%BA%94%E6%97%A5%E5%BD%93%E6%97%A5%E6%B6%A8%E8%B7%8C%E6%83%85%E5%86%B5.html"}], "文档链接": []}], "卡点": [], "更新": "2026-11-23", "子项数": 5, "已完成子项": 3, "阶段列表": [{"阶段": "成稿", "索引": [0, 1, 2]}, {"阶段": "复跑校验", "索引": [3]}, {"阶段": "交付", "索引": [4]}], "完整度": 80, "开放卡点数": 0}, {"id": "F", "名称": "F 缺口与 v4 规划", "一句话": "v3 已交卷；v4 和“62 分是不是运气”这两件事一件都还没开工", "状态": "未开始", "部分": [{"名称": "消息面特征自动化（NLP）", "完整度": 0, "说明": "现在靠人工读 11/14-15 的新闻手动改 7 个预测；还差：新闻抓取 → 事件/情感特征 → 进模型的管道。报告自己也把它列为“可重复性低”", "文件": [], "文档": ["【报告】LSTM预测股市未来五日当日涨跌情况.html"], "卡点": "需确认新闻源（财联社 / 东财 / 巨潮）与每日抓取成本，才敢定方案", "权重": 4, "体量": "大", "阶段": "v4 设计", "文件链接": [], "文档链接": [{"路径": "【报告】LSTM预测股市未来五日当日涨跌情况.html", "名": "【报告】LSTM预测股市未来五日当日涨跌情况.html", "url": "../../%E3%80%90%E6%8A%A5%E5%91%8A%E3%80%91LSTM%E9%A2%84%E6%B5%8B%E8%82%A1%E5%B8%82%E6%9C%AA%E6%9D%A5%E4%BA%94%E6%97%A5%E5%BD%93%E6%97%A5%E6%B6%A8%E8%B7%8C%E6%83%85%E5%86%B5.html"}]}, {"名称": "v4 美股信息融合", "完整度": 5, "说明": "目前只有一张参考图 AI基于美股信息的17日预测（v4版参考）.png，代码一行没动。还差：定用哪些美股指标（纳指/中概/隔夜 A50）以及怎么对齐 A 股开盘", "文件": ["AI基于美股信息的17日预测（v4版参考）.png"], "文档": [], "卡点": "需拍板：v4 先做美股隔夜映射，还是先补 A 股消息面量化", "权重": 3, "体量": "大", "阶段": "v4 设计", "文件链接": [{"路径": "AI基于美股信息的17日预测（v4版参考）.png", "名": "AI基于美股信息的17日预测（v4版参考）.png", "url": "../../AI%E5%9F%BA%E4%BA%8E%E7%BE%8E%E8%82%A1%E4%BF%A1%E6%81%AF%E7%9A%8417%E6%97%A5%E9%A2%84%E6%B5%8B%EF%BC%88v4%E7%89%88%E5%8F%82%E8%80%83%EF%BC%89.png"}], "文档链接": []}, {"名称": "样本与时间窗扩展", "完整度": 0, "说明": "只有 20 只股票 + 2025-11-17~21 单窗口，100 个预测；还差：扩到上百只股票、多时间窗滚动验证，否则 62 分可能只是这一周踩对了", "文件": ["overall_results.xlsx"], "文档": [], "权重": 5, "体量": "大", "阶段": "验证", "文件链接": [{"路径": "overall_results.xlsx", "名": "overall_results.xlsx", "url": "../../overall_results.xlsx"}], "文档链接": []}, {"名称": "重复与散落文件整理", "完整度": 30, "说明": "LSTM_forecast.ipynb 与 LSTM_training_code.ipynb 的 21 个代码格逐格相同（只差输出）；新建文件夹/ 里还有一份更旧的 code.ipynb 和一份课程作业 xlsx。还差：定哪份是主文件、其余归档，别让人改错副本", "文件": ["LSTM_forecast.ipynb", "LSTM_training_code.ipynb", "新建文件夹/code.ipynb"], "文档": [], "权重": 2, "体量": "小", "阶段": "整理", "文件链接": [{"路径": "LSTM_forecast.ipynb", "名": "LSTM_forecast.ipynb", "url": "../../LSTM_forecast.ipynb"}, {"路径": "LSTM_training_code.ipynb", "名": "LSTM_training_code.ipynb", "url": "../../LSTM_training_code.ipynb"}, {"路径": "新建文件夹/code.ipynb", "名": "code.ipynb", "url": "../../%E6%96%B0%E5%BB%BA%E6%96%87%E4%BB%B6%E5%A4%B9/code.ipynb"}], "文档链接": []}, {"名称": "版本控制", "完整度": 0, "说明": "项目没有 .git，版本靠文件名（v2 / v3（最终版） / 新建文件夹）区分；还差：git init 并提交一版基线，再补 .gitignore", "文件": [], "文档": [], "卡点": "需确认哪些大文件入库：code.ipynb 11.9MB、v3 html 12.1MB、数据集 zip 573KB，直接全提交会让仓库很重", "权重": 3, "体量": "中", "阶段": "整理", "文件链接": [], "文档链接": []}], "卡点": ["v4 方向未拍板：美股映射 vs 消息面量化", "仓库是否纳管大文件未定"], "更新": "2026-11-23", "子项数": 5, "已完成子项": 0, "阶段列表": [{"阶段": "v4 设计", "索引": [0, 1]}, {"阶段": "验证", "索引": [2]}, {"阶段": "整理", "索引": [3, 4]}], "完整度": 4, "开放卡点数": 5}], "AI接手": {"一句话": "LSTM 预测 A 股未来 5 日涨跌的课程项目：20 只股票 × 5 天 = 100 个预测，v3 终版 62/100。接手先读 AI交接.md，别急着跑 notebook。", "读序": ["AI交接.md（本文件由 看板数据.json 生成，待办队列与禁止事项都在里面）", "【报告】LSTM预测股市未来五日当日涨跌情况.html —— 结论、五方案得分、局限性；pdf 与 ipynb 同源", "看板使用说明.md（字段规范、完成度判定、同步方法）", "requirement.txt（包版本）；环境事实见第 2 节，务必用 nlp2025 环境"], "延伸阅读": [{"路径": "docs/看板/看板使用说明.md", "说明": "字段规范、完成度怎么算、同步命令与四种模式"}, {"路径": "【报告】LSTM预测股市未来五日当日涨跌情况.html", "说明": "完整报告：数据说明、模型设计、五方案结果、结果分析与局限性"}, {"路径": "关于股票分析的思路.docx", "说明": "选股方法论（政策→板块→个股→技术面），报告结论的现实解释来自这里"}], "环境": {"工作目录": "D:/股票预测", "解释器": "$env:USERPROFILE/anaconda3/envs/nlp2025/python.exe", "python版本": "3.10.16（所有 notebook 的 kernelspec 都是 nlp2025 / 3.10.16）", "编码要求": "Windows 下先 $env:PYTHONIOENCODING='utf-8'，再 python -X utf8；否则中文输出乱码、写 JSON 报错", "版本控制": "未用 git（项目内没有 .git），版本靠文件名 v2 / v3（最终版）区分", "已装关键包": ["numpy 1.26.4", "pandas 2.3.3", "torch 2.5.1", "tensorflow 2.20.0", "scikit-learn 1.6.1", "matplotlib 3.10.1", "seaborn 0.13.2", "akshare 1.17.83", "xgboost 3.1.1", "packaging 24.2"], "缺失包及后果": {"anaconda3 base 环境": "torch / tensorflow / xgboost / akshare 在 base 里全缺，用 base 跑任何建模代码都会 ImportError；请先 conda activate nlp2025"}}, "常用命令": [{"用途": "同步看板（体检 → 生成 → 自检）", "命令": "& \"$env:USERPROFILE/anaconda3/envs/nlp2025/python.exe\" -X utf8 \"docs/看板/同步.py\"", "期望": "末行 ✅ 同步完成，一切一致（退出码 0）"}, {"用途": "只校验不生成（收工前 / 提交前）", "命令": "& \"$env:USERPROFILE/anaconda3/envs/nlp2025/python.exe\" -X utf8 \"docs/看板/同步.py\" --check", "期望": "数据体检通过 + 产物未过期 + 结论 ✅"}, {"用途": "核对缓存数量（复现前提）", "命令": "(Get-ChildItem data_cache -Filter *.pkl).Count", "期望": "111"}, {"用途": "核对五方案得分", "命令": "& \"$env:USERPROFILE/anaconda3/envs/nlp2025/python.exe\" -X utf8 -c \"import pandas as pd; print(pd.read_excel('model_comparison.xlsx', header=None).iloc[-1].tolist())\"", "期望": "['准确率/正确个数', nan, 0.586085, 53, 55, 0.629545, 52, 57.5, 62]"}, {"用途": "核对四个重包版本", "命令": "& \"$env:USERPROFILE/anaconda3/envs/nlp2025/python.exe\" -X utf8 -c \"import importlib.metadata as m; [print(k, m.version(k)) for k in ['torch','tensorflow','xgboost','akshare']]\"", "期望": "torch 2.5.1 / tensorflow 2.20.0 / xgboost 3.1.1 / akshare 1.17.83"}], "禁止事项": [{"事": "不要手改 任务看板.html / AI交接.md", "原因": "两个文件都是生成物，下次同步整份覆盖，手改必丢", "证据": "docs/看板/生成看板.py"}, {"事": "不要删改 data_cache/*.pkl，也不要因为“想重跑一遍”而重新下载", "原因": "111 份缓存是所有数字的唯一来源；akshare 重拉会拿到随日期变化的新行情，62/100 将无法复现", "证据": "复现必须数据集.zip"}, {"事": "不要用 anaconda base 跑建模代码", "原因": "base 里 torch / tensorflow / xgboost / akshare 全缺，必然 ImportError", "证据": "requirement.txt"}, {"事": "不要改动 0.25% 容差口径，也不要把 0.5 当错误", "原因": "预测与真实都取 1（涨）/0（跌）/0.5（涨跌幅绝对值小于 0.25% 算不涨不跌），单日得分取两者之差的绝对值；改口径等于把 53/55/52/57.5/62 全部作废", "证据": "overall_results.xlsx"}, {"事": "不要在特征里引入当日 close / open", "原因": "现有特征统一先 shift(1) 再算，这是“不泄露未来”的唯一保障；破了这点所有准确率都会虚高", "证据": "code.ipynb 的 engineer_features"}, {"事": "不要相信 【报告】ipynb 能一键重算结果", "原因": "它的训练段用 torch 定义模型、却调 Keras 的 .fit/.predict，按现状重跑会报错；报告里的输出是历史结果，真要重算请用 LSTM_training_code.ipynb", "证据": "【报告】LSTM预测股市未来五日当日涨跌情况.ipynb"}], "既定结论": [{"结论": "评分口径：预测与真实都取 1（涨）/0（跌）/0.5（涨跌幅绝对值小于 0.25% 算不涨不跌），单日得分取两者之差的绝对值，100 个预测求和为总分", "用途": "任何得分都必须按这个口径算，改口径则历史结论不可比", "文件": "overall_results.xlsx"}, {"结论": "五方案得分：xgb 53 / xgb+消息面 55 / LSTM 52 / LSTM+低把握 57.5 / LSTM+低把握+消息面 62", "用途": "报告正文、对比图、结论全部引用这组数字", "文件": "model_comparison.xlsx"}, {"结论": "LSTM 结构已定型：1 层、16 隐单元、sigmoid；seq_length=30；调参网格 start_date=20241001 × prev_trend_days 5~35", "用途": "换结构就等于换题目，五个方案要全部重跑", "文件": "LSTM_training_code.ipynb"}, {"结论": "低把握阈值 0.525：预测为涨且把握 <0.525 改判 0.5，LSTM 由 52 升到 57.5", "用途": "这是分数提升主因，别随手调阈值还说结论没变", "文件": "【报告】LSTM预测股市未来五日当日涨跌情况.ipynb"}, {"结论": "样本口径 20 只股票 × 2025-11-17~21 五个交易日 = 100 个预测", "用途": "扩样本就是换了评估对象，不能直接和 62 分比高低", "文件": "overall_results.xlsx"}, {"结论": "环境锁定：requirement.txt 的 10 个包与 conda 环境 nlp2025 实测 10/10 一致（Python 3.10.16）", "用途": "换版本可能复现不出同样的准确率", "文件": "requirement.txt"}], "验证归属": [{"流程": "看板数据 / 两个产物", "命令": "同步.py --check", "期望": "数据体检通过、产物未过期、结论 ✅"}, {"流程": "数据缓存", "命令": "(Get-ChildItem data_cache -Filter *.pkl).Count", "期望": "111"}, {"流程": "得分表", "命令": "读 model_comparison.xlsx 最后一行", "期望": "0.586085 / 53 / 55 / 0.629545 / 52 / 57.5 / 62"}, {"流程": "运行环境", "命令": "在 nlp2025 里打印 torch/tensorflow/xgboost/akshare 版本", "期望": "2.5.1 / 2.20.0 / 3.1.1 / 1.17.83"}], "同步协议": ["本项目的看板同步不自动执行：只有负责人明确同意时才跑 同步.py", "每完成一段工作，agent 应问一句「这次进度要不要同步进看板？」再动手", "用户同意后，只改 看板数据.json 中对应子项的 完整度 / 说明 / 卡点 / 文件，并更新该流程的 更新 日期", "跑 & \"$env:USERPROFILE/anaconda3/envs/nlp2025/python.exe\" -X utf8 \"docs/看板/同步.py\"，退出码必须为 0", "任何 100% 都要能说出用什么命令复核过；拿不出验证方式的，不许标 100"], "检查项": {"根目录AGENTS": "warn"}}, "统计": {"流程数": 6, "子项总数": 23, "整体完整度": 77, "子项已完成": 13, "子项未开始": 3, "加权口径": "按子项重要度加权（1=普通 / 5=决定能否交付）", "可用": 4, "部分可用": 0, "待修": 1, "阻塞": 0, "未开始": 1}}</script>
+<script>
+(function(){
+  const DATA = JSON.parse(document.getElementById('board-data').textContent);
+  const flows = DATA['流程'] || [];
+  const BG = {'可用':'#dcfce7','部分可用':'#ccfbf1','待修':'#fef3c7','阻塞':'#fee2e2','未开始':'#f1f5f9'};
+  const FG = {'可用':'#166534','部分可用':'#115e59','待修':'#92400e','阻塞':'#991b1b','未开始':'#475569'};
+
+  function barColor(v){ return v>=100?'var(--green)': v>=70?'var(--blue)': v>=40?'var(--amber)': v>0?'#ea580c':'var(--gray)'; }
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+  document.getElementById('title').textContent = DATA['标题'] || '项目流程看板';
+  document.getElementById('subtitle').textContent =
+    '更新：' + (DATA['更新日期']||'—') + '　·　' + (DATA['更新人']||'') + '　·　' + (DATA['说明']||'');
+
+  const st = DATA['统计'] || {};
+  const cards = [
+    ['整体完整度（加权）', (st['整体完整度']??'—')+'%'],
+    ['子项已完成', st['子项已完成'] ?? '—'],
+    ['子项总数', st['子项总数'] ?? '—'],
+    ['子项未开始', st['子项未开始'] ?? '—'],
+    ['流程数', st['流程数'] ?? '—'],
+    ['可用', st['可用'] ?? 0], ['待修', st['待修'] ?? 0], ['阻塞', st['阻塞'] ?? 0]
+  ];
+  document.getElementById('cards').innerHTML = cards.map(([k,v])=>
+    '<div class="card"><div class="k">'+esc(k)+'</div><div class="v">'+esc(v)+'</div></div>').join('');
+
+  let filterStatus = '全部', keyword = '';
+  const openSet = new Set();      // 哪些流程处于展开状态
+  const hideDone = new Map();     // 流程下标 -> 是否隐藏已完成子项
+
+  function subHTML(p, idx, hide){
+    const v = p['完整度'] ?? 0;
+    const c = barColor(v);
+    let files = (p['文件链接']||[]).map(x=>'<a href="'+x['url']+'" target="_blank" title="'+esc(x['路径'])+'">'+esc(x['名'])+'</a>');
+    let docs  = (p['文档链接']||[]).map(x=>'<a href="'+x['url']+'" target="_blank" title="'+esc(x['路径'])+'">'+esc(x['名'])+'</a>');
+    let links = '';
+    if(files.length) links += '<span><span class="tag">📄 依赖文件：</span>'+files.join('　')+'</span>';
+    if(docs.length)  links += '<span><span class="tag">📘 说明文档：</span>'+docs.join('　')+'</span>';
+    const hidden = (hide && v >= 100) ? ' hide' : '';
+    return '<div class="sub'+hidden+'" style="border-left-color:'+c+'">'
+      + '<div class="s-no">'+String(idx).padStart(2,'0')+'</div>'
+      + '<div>'
+      +   '<div class="s-name">'+esc(p['名称'])
+      +     '<span class="wchip w'+(p['权重']||1)+'" title="权重 '+ (p['权重']||1) +'：1=普通，3=重要，5=决定该模块能否交付">权重 '+(p['权重']||1)+'</span>'
+      +     (p['作废']?'<span class="wchip w1" style="opacity:.6" title="'+esc(p['作废说明']||'已作废')+'">已作废</span>':'')
+      +   '</div>'
+      +   (p['说明']?'<div class="s-desc">'+esc(p['说明'])+'</div>':'')
+      +   (links?'<div class="s-links">'+links+'</div>':'')
+      +   (p['卡点']?'<div class="s-kt">⚠ '+esc(p['卡点'])+'</div>':'')
+      + '</div>'
+      + '<div class="s-bar"><div class="bar"><i style="width:'+v+'%;background:'+c+'"></i></div>'
+      +   '<div class="t" style="color:'+c+'">'+v+'%</div></div>'
+      + '</div>';
+  }
+
+  function graphHTML(f, i, hide){
+    const stages = f['阶段列表']||[];
+    const parts = f['部分']||[];
+    if(!stages.length) return '';
+    let h = '<div class="graph">';
+    stages.forEach((s, si)=>{
+      if(si) h += '<div class="garrow">→</div>';
+      h += '<div class="stage"><div class="stage-head">阶段 '+(si+1)+' · '+esc(s['阶段'])+'</div><div class="stage-body">';
+      (s['索引']||[]).forEach(idx=>{
+        const p = parts[idx]; if(!p) return;
+        const v = p['完整度'] ?? 0, c = barColor(v);
+        const hidden = (hide && v >= 100) ? ' hide' : '';
+        h += '<div class="gcard'+hidden+'" style="border-left-color:'+c+'" title="权重 '+ (p['权重']||1) +'｜'+esc(p['说明']||'')+'">'
+          + '<div class="gn"><span>'+esc(p['名称'])+'</span>'
+          +   '<span class="wmin w'+(p['权重']||1)+'">W'+(p['权重']||1)+'</span></div>'
+          + '<div class="gbar"><i style="width:'+v+'%;background:'+c+'"></i></div>'
+          + '<div class="gp" style="color:'+c+'">'+v+'%</div></div>';
+      });
+      h += '</div></div>';
+    });
+    h += '</div>';
+    return h;
+  }
+
+  function flowHTML(f, i){
+    const stt = f['状态']||'未开始', pct = f['完整度']||0, c = barColor(pct);
+    const parts = f['部分']||[];
+    const hide = !!hideDone.get(i);
+    const doneN = parts.filter(p=>(p['完整度']??0)>=100).length;
+    const subs = parts.map((p,k)=>subHTML(p,k+1,hide)).join('');
+    const kt = (f['卡点']||[]);
+    const opened = openSet.has(i) ? ' open' : '';
+    const expHide = openSet.has(i) ? '' : ' hide';
+    const togLabel = hide ? ('显示已完成 ('+doneN+')') : ('隐藏已完成 ('+doneN+')');
+    return '<tr class="flow'+opened+'" data-i="'+i+'">'
+      + '<td><div class="name"><span class="arrow">▶</span> '+esc(f['名称'])+'</div>'
+      +   '<div class="desc">'+esc(f['一句话'])+'</div></td>'
+      + '<td><span class="pill" style="background:'+(BG[stt]||'#f1f5f9')+';color:'+(FG[stt]||'#475569')+'">'+esc(stt)+'</span></td>'
+      + '<td><div class="pctwrap"><div class="bar" style="flex:1"><i style="width:'+pct+'%;background:'+c+'"></i></div>'
+      +   '<span class="pct" style="color:'+c+'">'+pct+'%</span></div></td>'
+      + '<td class="num">'+(f['已完成子项']||0)+' / '+(f['子项数']||0)+'</td>'
+      + '<td class="num">'+(f['开放卡点数']?f['开放卡点数']+' 个':'—')+'</td>'
+      + '<td class="num">'+esc(f['更新']||'')+'</td></tr>'
+      + '<tr class="exp'+expHide+'" data-i="'+i+'"><td colspan="6"><div class="expbox">'
+      +   '<div class="exphead"><b>'+parts.length+' 个子项</b>'
+      +     '　·　已完成 '+(f['已完成子项']||0)+' 个'
+      +     '　·　按流程顺序排列'
+      +     (doneN?'　·　<button class="btn small tog" data-i="'+i+'">'+togLabel+'</button>':'')
+      +   '</div>'
+      +   '<div class="legend">⬆ 流程图：<b>同一列内的子项互不依赖、可并行</b>；列与列之间才是先后顺序。'
+      +     '<b>W1~W5 = 权重</b>（1 普通 · 3 重要 · 5 决定该模块能否交付），越重要数字越红。</div>'
+      +   graphHTML(f, i, hide)
+      +   '<div class="listsep">子项明细（按流程顺序）</div>'
+      +   (subs || '<div class="s-desc">（尚未拆分子项）</div>')
+      +   (kt.length?'<div style="margin-top:10px;font-size:11.5px;color:#b91c1c"><b>本条链整体卡点：</b>'+kt.map(esc).join('；')+'</div>':'')
+      + '</div></td></tr>';
+  }
+
+  function match(f){
+    if(filterStatus!=='全部' && f['状态']!==filterStatus) return false;
+    if(!keyword) return true;
+    const k = keyword.toLowerCase();
+    if((f['名称']||'').toLowerCase().includes(k)) return true;
+    if((f['一句话']||'').toLowerCase().includes(k)) return true;
+    return (f['部分']||[]).some(p=>(p['名称']||'').toLowerCase().includes(k)
+        || (p['说明']||'').toLowerCase().includes(k));
+  }
+
+  const tb = document.getElementById('tb');
+  function render(){
+    const visible = flows.map((f,i)=>({f,i})).filter(x=>match(x.f));
+    tb.innerHTML = visible.length ? visible.map(x=>flowHTML(x.f, x.i)).join('')
+      : '<tr><td colspan="6" style="text-align:center;color:#94a3b8;padding:28px">没有匹配的流程</td></tr>';
+  }
+
+  tb.addEventListener('click', e=>{
+    const tg = e.target.closest('button.tog');       // 一键隐藏/显示已完成子项
+    if(tg){
+      e.stopPropagation();
+      const ti = +tg.dataset.i;
+      hideDone.set(ti, !hideDone.get(ti));
+      openSet.add(ti);                               // 保持展开，别让它塌回去
+      render();
+      return;
+    }
+    if(e.target.closest('a')) return;               // 点链接不触发折叠
+    const tr = e.target.closest('tr.flow'); if(!tr) return;
+    const i = +tr.dataset.i;
+    if(openSet.has(i)) openSet.delete(i); else openSet.add(i);
+    const exp = tr.nextElementSibling;
+    if(exp && exp.classList.contains('exp')){
+      exp.classList.toggle('hide', !openSet.has(i));
+      tr.classList.toggle('open', openSet.has(i));
+    }
+  });
+
+  document.querySelectorAll('.chip').forEach(ch=>{
+    ch.addEventListener('click', ()=>{
+      document.querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));
+      ch.classList.add('on'); filterStatus = ch.dataset.status; render();
+    });
+  });
+  document.getElementById('q').addEventListener('input', e=>{
+    keyword = e.target.value.trim();
+    if(keyword){ flows.forEach((f,i)=>{ if(match(f)) openSet.add(i); }); }
+    render();
+  });
+  document.getElementById('expandAll').addEventListener('click', ()=>{
+    flows.forEach((f,i)=>{ if(match(f)) openSet.add(i); }); render();
+  });
+  document.getElementById('collapseAll').addEventListener('click', ()=>{ openSet.clear(); render(); });
+  document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ openSet.clear(); render(); } });
+
+  render();
+})();
+</script>
+</body>
+</html>
